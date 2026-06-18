@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { Address, Label, EXPRESS_COMPANIES } from '../types';
+import { Address, Label, EXPRESS_COMPANIES, ShippingStatus, SHIPPING_STATUS } from '../types';
 import { generateId, generateTrackingNumber, saveBatch } from '../utils/storage';
 import { renderLabel, renderSmallLabel } from '../utils/renderer';
 import { exportHtml } from '../utils/exporter';
@@ -121,6 +121,18 @@ export async function batchCommand(filePath: string): Promise<void> {
   const now = new Date();
   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+  const { initialStatus } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'initialStatus',
+      message: '请选择初始发货状态:',
+      choices: [
+        { name: SHIPPING_STATUS.pending.label, value: 'pending' as ShippingStatus },
+        { name: SHIPPING_STATUS.shipped.label, value: 'shipped' as ShippingStatus },
+      ],
+    },
+  ]);
+
   const labels: Label[] = items.map(item => ({
     id: generateId(),
     expressCompany: item.expressCompany || defaultCompany,
@@ -142,6 +154,8 @@ export async function batchCommand(filePath: string): Promise<void> {
     },
     createdAt: dateStr,
     trackingNumber: generateTrackingNumber(item.expressCompany || defaultCompany),
+    status: initialStatus,
+    shippedAt: initialStatus === 'shipped' ? dateStr : undefined,
   }));
 
   // Show preview

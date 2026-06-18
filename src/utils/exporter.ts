@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Label, EXPRESS_COMPANIES } from '../types';
+import { Label, EXPRESS_COMPANIES, SHIPPING_STATUS } from '../types';
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -12,14 +12,23 @@ function getCompanyInfo(code: string) {
 
 function renderSingleLabelHtml(label: Label): string {
   const company = getCompanyInfo(label.expressCompany);
+  const statusInfo = SHIPPING_STATUS[label.status];
   const senderAddr = `${label.sender.province}${label.sender.city}${label.sender.district}${label.sender.detail}`;
   const receiverAddr = `${label.receiver.province}${label.receiver.city}${label.receiver.district}${label.receiver.detail}`;
+
+  const shippedText = label.status === 'shipped' && label.shippedAt
+    ? `<span class="shipped-time">发货时间: ${escapeHtml(label.shippedAt)}</span>`
+    : '';
 
   return `
     <div class="label">
       <div class="label-header" style="border-bottom-color: ${company.color}">
         <span class="company-name" style="color: ${company.color}">【${escapeHtml(company.name)}】</span>
         <span class="tracking-number">单号: ${escapeHtml(label.trackingNumber)}</span>
+      </div>
+      <div class="label-status">
+        <span class="status-badge" style="background: ${statusInfo.color}">${statusInfo.label}</span>
+        ${shippedText}
       </div>
       <div class="label-body">
         <div class="address-section sender">
@@ -97,6 +106,25 @@ export function generateHtml(labels: Label[]): string {
       font-size: 14px;
       font-family: monospace;
       color: #333;
+    }
+    .label-status {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px dashed #ccc;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .shipped-time {
+      font-size: 12px;
+      color: #666;
     }
     .label-body {
       padding: 12px 16px;

@@ -7,6 +7,13 @@ export interface Address {
   detail: string;
 }
 
+export type ShippingStatus = 'pending' | 'shipped';
+
+export const SHIPPING_STATUS: Record<ShippingStatus, { label: string; color: string }> = {
+  pending: { label: '待发货', color: '#FFA500' },
+  shipped: { label: '已发货', color: '#228B22' },
+};
+
 export interface Label {
   id: string;
   expressCompany: string;
@@ -14,6 +21,8 @@ export interface Label {
   receiver: Address;
   createdAt: string;
   trackingNumber: string;
+  status: ShippingStatus;
+  shippedAt?: string;
 }
 
 export interface LabelBatch {

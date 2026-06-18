@@ -1,8 +1,9 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { loadHistory, clearHistory } from '../utils/storage';
+import { loadHistory, clearHistory, updateLabelStatus } from '../utils/storage';
 import { renderLabel, renderSmallLabel } from '../utils/renderer';
 import { exportHtml } from '../utils/exporter';
+import { SHIPPING_STATUS, ShippingStatus } from '../types';
 
 export async function historyCommand(): Promise<void> {
   console.log(chalk.bold.magenta('\n========================================'));
@@ -25,8 +26,10 @@ export async function historyCommand(): Promise<void> {
   batches.forEach((batch, bIdx) => {
     batch.labels.forEach((label, lIdx) => {
       const company = label.expressCompany;
+      const statusInfo = SHIPPING_STATUS[label.status];
+      const statusColor = label.status === 'shipped' ? chalk.green : chalk.yellow;
       choices.push({
-        name: `[${label.createdAt}] ${company} - ${label.sender.name} -> ${label.receiver.name} (${label.trackingNumber})`,
+        name: `${statusColor(`[${statusInfo.label}]`)} [${label.createdAt}] ${company} - ${label.sender.name} -> ${label.receiver.name} (${label.trackingNumber})`,
         value: `${bIdx}-${lIdx}`,
       });
     });
@@ -79,9 +82,13 @@ export async function historyCommand(): Promise<void> {
   // Show specific label
   const [bIdx, lIdx] = selected.split('-').map(Number);
   const label = batches[bIdx].labels[lIdx];
+  const currentStatus = label.status;
 
   console.log(chalk.bold.yellow('\n========== 面单详情 ==========\n'));
   console.log(renderLabel(label));
+
+  const otherStatus: ShippingStatus = currentStatus === 'pending' ? 'shipped' : 'pending';
+  const otherStatusLabel = SHIPPING_STATUS[otherStatus].label;
 
   const { action } = await inquirer.prompt([
     {
@@ -89,11 +96,22 @@ export async function historyCommand(): Promise<void> {
       name: 'action',
       message: '操作:',
       choices: [
+        { name: `标记为「${otherStatusLabel}」`, value: 'toggle-status' },
         { name: '导出此面单为HTML', value: 'export' },
         { name: '返回', value: 'back' },
       ],
     },
   ]);
+
+  if (action === 'toggle-status') {
+    const ok = updateLabelStatus(label.id, otherStatus);
+    if (ok) {
+      console.log(chalk.green(`\n状态已更新为「${SHIPPING_STATUS[otherStatus].label}」`));
+    } else {
+      console.log(chalk.red('\n更新状态失败，请稍后重试。'));
+    }
+    return;
+  }
 
   if (action === 'export') {
     const filePath = exportHtml([label]);

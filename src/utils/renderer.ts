@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { Label, EXPRESS_COMPANIES } from '../types';
+import { Label, EXPRESS_COMPANIES, SHIPPING_STATUS } from '../types';
 
 function padRight(str: string, len: number): string {
   const visible = str.replace(/[一-鿿＀-￯]/g, 'xx');
@@ -32,6 +32,7 @@ function formatAddress(addr: { province: string; city: string; district: string;
 export function renderLabel(label: Label): string {
   const company = EXPRESS_COMPANIES.find(c => c.code === label.expressCompany);
   const companyName = company ? company.name : label.expressCompany;
+  const statusInfo = SHIPPING_STATUS[label.status];
   const width = 50;
   const innerWidth = width - 4;
 
@@ -60,10 +61,17 @@ export function renderLabel(label: Label): string {
   const senderWrapped = senderLines.flatMap(l => wrapText(l, innerWidth));
   const receiverWrapped = receiverLines.flatMap(l => wrapText(l, innerWidth));
 
+  const statusText = label.status === 'shipped'
+    ? `【${statusInfo.label}】 发货时间: ${label.shippedAt || label.createdAt}`
+    : `【${statusInfo.label}】`;
+  const statusColor = label.status === 'shipped' ? chalk.green : chalk.yellow;
+
   const lines: string[] = [];
   lines.push(topBorder);
   lines.push(makeLine(`【${companyName}】  单号: ${label.trackingNumber}`));
   lines.push(separator);
+  lines.push(statusColor.bold(makeLine(statusText)));
+  lines.push(thinSep);
 
   lines.push(makeLine(''));
   lines.push(chalk.green.bold(makeLine('>>> 发件信息 <<<')));
@@ -89,6 +97,7 @@ export function renderLabel(label: Label): string {
 export function renderLabelPlain(label: Label): string {
   const company = EXPRESS_COMPANIES.find(c => c.code === label.expressCompany);
   const companyName = company ? company.name : label.expressCompany;
+  const statusInfo = SHIPPING_STATUS[label.status];
   const width = 50;
   const innerWidth = width - 4;
 
@@ -117,10 +126,16 @@ export function renderLabelPlain(label: Label): string {
   const senderWrapped = senderLines.flatMap(l => wrapText(l, innerWidth));
   const receiverWrapped = receiverLines.flatMap(l => wrapText(l, innerWidth));
 
+  const statusText = label.status === 'shipped'
+    ? `【${statusInfo.label}】 发货时间: ${label.shippedAt || label.createdAt}`
+    : `【${statusInfo.label}】`;
+
   const lines: string[] = [];
   lines.push(topBorder);
   lines.push(makeLine(`【${companyName}】  单号: ${label.trackingNumber}`));
   lines.push(separator);
+  lines.push(makeLine(statusText));
+  lines.push(thinSep);
   lines.push(makeLine(''));
   lines.push(makeLine('>>> 发件信息 <<<'));
   for (const sl of senderWrapped) {
@@ -143,10 +158,12 @@ export function renderLabelPlain(label: Label): string {
 export function renderSmallLabel(label: Label): string {
   const company = EXPRESS_COMPANIES.find(c => c.code === label.expressCompany);
   const companyName = company ? company.name : label.expressCompany;
+  const statusInfo = SHIPPING_STATUS[label.status];
+  const statusColor = label.status === 'shipped' ? chalk.green : chalk.yellow;
 
   const lines: string[] = [];
   lines.push(chalk.gray(`  ┌${'─'.repeat(44)}┐`));
-  lines.push(chalk.gray('  │') + chalk.bold(` 【${companyName}】 ${label.trackingNumber} `) + chalk.gray('│'));
+  lines.push(chalk.gray('  │') + chalk.bold(` 【${companyName}】 ${label.trackingNumber} `) + statusColor(`[${statusInfo.label}]`) + chalk.gray('│'));
   lines.push(chalk.gray(`  ├${'─'.repeat(44)}┤`));
   lines.push(chalk.gray('  │') + chalk.green(` 寄: ${label.sender.name} ${label.sender.phone}`) + chalk.gray('│'));
   lines.push(chalk.gray('  │') + chalk.red(` 收: ${label.receiver.name} ${label.receiver.phone}`) + chalk.gray('│'));
